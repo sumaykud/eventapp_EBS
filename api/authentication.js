@@ -1,15 +1,16 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getSupabaseClient } from '../src/api/database.js';
-import config, { getConfig } from '../src/utils/config.js';
+import { createClient } from '@supabase/supabase-js';
 
-// Get database client
-const supabase = getSupabaseClient();
+// Initialize Supabase client
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// JWT configuration from config
-const JWT_SECRET = getConfig('jwt.secret');
-const JWT_EXPIRES_IN = getConfig('jwt.expiresIn');
-const BCRYPT_SALT_ROUNDS = getConfig('security.bcryptSaltRounds');
+// JWT configuration from environment variables
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
 
 // Helper function to generate JWT token
 const generateToken = (userId, email, role = 'user') => {

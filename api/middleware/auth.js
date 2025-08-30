@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
-import { getSupabaseClient } from '../../src/api/database.js';
-import { getConfig } from '../../src/utils/config.js';
+import { createClient } from '@supabase/supabase-js';
 
-// Get database client and configuration
-const supabase = getSupabaseClient();
-const JWT_SECRET = getConfig('jwt.secret');
+// Initialize Supabase client
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Middleware to verify JWT token and authenticate user
