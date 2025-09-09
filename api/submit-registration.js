@@ -1,9 +1,40 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
 );
+
+// Email validation regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Phone validation regex (basic international format)
+const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+
+// Validation function
+function validateRegistrationData(data) {
+  const errors = [];
+  const { name, age, reason, email, phone } = data;
+
+  // Required field validation
+  if (!name || name.trim().length < 2) {
+    errors.push('Name must be at least 2 characters long');
+  }
+  if (!age || isNaN(age) || age < 1 || age > 120) {
+    errors.push('Age must be a valid number between 1 and 120');
+  }
+  if (!reason || reason.trim().length < 10) {
+    errors.push('Reason must be at least 10 characters long');
+  }
+  if (!email || !emailRegex.test(email)) {
+    errors.push('Please provide a valid email address');
+  }
+  if (phone && !phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+    errors.push('Please provide a valid phone number');
+  }
+
+  return errors;
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -12,7 +43,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
   if (req.method === 'OPTIONS') {
@@ -27,27 +58,43 @@ export default async function handler(req, res) {
   try {
     const { name, age, reason, email, phone } = req.body;
 
-    // Validate required fields
-    if (!name || !age || !reason || !email) {
+    // Validate input data
+    const validationErrors = validateRegistrationData(req.body);
+    if (validationErrors.length > 0) {
       return res.status(400).json({ 
-        error: 'Missing required fields: name, age, reason, email' 
+        error: 'Validation failed',
+        details: validationErrors
       });
     }
+
+    // Check for duplicate email
+    const { data: existingRegistration } = await supabase
+      .from('registrations')
+      .select('id, email')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (existingRegistration) {
+      return res.status(409).json({ 
+        error: 'A registration with this email already exists' 
+      });
+    }
+
+    // Sanitize and prepare data
+    const sanitizedData = {
+      name: name.trim(),
+      age: parseInt(age),
+      reason: reason.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone ? phone.replace(/[\s\-\(\)]/g, '') : null,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
 
     // Insert user data into Supabase
     const { data, error } = await supabase
       .from('registrations')
-      .insert([
-        {
-          name,
-          age: parseInt(age),
-          reason,
-          email,
-          phone,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        }
-      ])
+      .insert([sanitizedData])
       .select();
 
     if (error) {
@@ -55,13 +102,23 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to save registration' });
     }
 
-    return res.status(200).json({ 
-      message: 'Registration submitted successfully',
-      data: data[0]
+    return res.status(201).json({ 
+      success: true,
+      message: 'Registration submitted successfully! You will receive a confirmation email shortly.',
+      data: {
+        id: data[0].id,
+        name: data[0].name,
+        email: data[0].email,
+        status: data[0].status,
+        created_at: data[0].created_at
+      }
     });
 
   } catch (error) {
     console.error('Server error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Something went wrong. Please try again later.'
+    });
   }
 }

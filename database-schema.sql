@@ -11,7 +11,11 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
-    role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator')),
+    role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    photo TEXT, -- URL to user's photo
+    ebs_join_date DATE, -- Date when user joined EBS (if applicable)
+    is_baptized BOOLEAN DEFAULT false, -- Baptism status (No/Yes)
+    baptism_date DATE, -- Date of baptism (if baptized)
     is_active BOOLEAN DEFAULT true,
     email_verified BOOLEAN DEFAULT false,
     last_login TIMESTAMP WITH TIME ZONE,
@@ -31,6 +35,7 @@ CREATE TABLE IF NOT EXISTS registrations (
     phone VARCHAR(20),
     status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
     document_url TEXT, -- For file uploads
+    admin_notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -71,6 +76,8 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_is_baptized ON users(is_baptized);
+CREATE INDEX IF NOT EXISTS idx_users_ebs_join_date ON users(ebs_join_date);
 CREATE INDEX IF NOT EXISTS idx_registrations_user_id ON registrations(user_id);
 CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(status);
 CREATE INDEX IF NOT EXISTS idx_registrations_email ON registrations(email);
@@ -171,6 +178,99 @@ CREATE POLICY "Users can view own sessions" ON user_sessions
 CREATE POLICY "Service role can manage user sessions" ON user_sessions
     FOR ALL WITH CHECK (auth.role() = 'service_role');
 
+-- Enable RLS on new tables
+ALTER TABLE learning_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_module_progress ENABLE ROW LEVEL SECURITY;
+
+-- Learning modules policies
+-- Everyone can view published modules
+CREATE POLICY "Anyone can view published learning modules" ON learning_modules
+    FOR SELECT USING (is_published = true);
+
+-- Admins can manage all learning modules
+CREATE POLICY "Admins can manage learning modules" ON learning_modules
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Blog posts policies
+-- Everyone can view published blog posts
+CREATE POLICY "Anyone can view published blog posts" ON blog_posts
+    FOR SELECT USING (is_published = true);
+
+-- Authors can view their own posts
+CREATE POLICY "Authors can view own posts" ON blog_posts
+    FOR SELECT USING (author_id = auth.uid());
+
+-- Admins can manage all blog posts
+CREATE POLICY "Admins can manage blog posts" ON blog_posts
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM admin_users au 
+            WHERE au.user_id = auth.uid()
+        )
+    );
+
+-- Authors can manage their own posts
+CREATE POLICY "Authors can manage own posts" ON blog_posts
+    FOR ALL USING (author_id = auth.uid());
+
+-- User module progress policies
+-- Users can view and update their own progress
+CREATE POLICY "Users can manage own module progress" ON user_module_progress
+    FOR ALL USING (user_id = auth.uid());
+
+-- Admins can view all user progress
+CREATE POLICY "Admins can view all module progress" ON user_module_progress
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Enable RLS on admin_users
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Only admins can view admin_users
+CREATE POLICY "Admins can view admin users" ON admin_users
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM admin_users au 
+            WHERE au.user_id = auth.uid()
+        )
+    );
+
+-- Policy: Only super admins can manage admin_users
+CREATE POLICY "Super admins can manage admin users" ON admin_users
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM admin_users au 
+            WHERE au.user_id = auth.uid() 
+            AND au.permissions ? 'manage_admins'
+        )
+    );
+
+-- Enable RLS on blog_categories
+ALTER TABLE blog_categories ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Everyone can view categories
+CREATE POLICY "Anyone can view categories" ON blog_categories
+    FOR SELECT USING (true);
+
+-- Policy: Only admins can manage categories
+CREATE POLICY "Admins can manage categories" ON blog_categories
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM admin_users au 
+            WHERE au.user_id = auth.uid()
+        )
+    );
+
 -- Insert default admin user (optional)
 -- Remember to change the password hash to your actual hashed password
 -- This is just an example - you should create admin users through your API
@@ -185,6 +285,44 @@ VALUES (
     true
 ) ON CONFLICT (email) DO NOTHING;
 */
+
+-- Create admin_users table for admin role management
+CREATE TABLE admin_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL DEFAULT 'admin',
+    permissions JSONB DEFAULT '[]'::jsonb,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+-- Create indexes for admin_users
+CREATE INDEX idx_admin_users_user_id ON admin_users(user_id);
+CREATE INDEX idx_admin_users_role ON admin_users(role);
+
+-- Add trigger for admin_users updated_at
+CREATE TRIGGER update_admin_users_updated_at
+    BEFORE UPDATE ON admin_users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Create blog_categories table for better category management
+CREATE TABLE blog_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create trigger for blog_categories updated_at
+CREATE TRIGGER update_blog_categories_updated_at
+    BEFORE UPDATE ON blog_categories
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 -- Create a function to clean up expired tokens (run periodically)
 CREATE OR REPLACE FUNCTION cleanup_expired_tokens()
@@ -205,6 +343,65 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- You can set up a cron job or scheduled function to run cleanup_expired_tokens() periodically
+
+-- 6. Learning modules table for MVP
+CREATE TABLE IF NOT EXISTS learning_modules (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    content TEXT NOT NULL,
+    order_index INTEGER DEFAULT 0,
+    is_published BOOLEAN DEFAULT false,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 7. Blog posts table for MVP
+CREATE TABLE IF NOT EXISTS blog_posts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    excerpt TEXT,
+    content TEXT NOT NULL,
+    featured_image TEXT,
+    is_published BOOLEAN DEFAULT false,
+    published_at TIMESTAMP WITH TIME ZONE,
+    author_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    meta_description TEXT,
+    category_id UUID REFERENCES blog_categories(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 8. User progress tracking for learning modules
+CREATE TABLE IF NOT EXISTS user_module_progress (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    module_id UUID REFERENCES learning_modules(id) ON DELETE CASCADE,
+    completed BOOLEAN DEFAULT false,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, module_id)
+);
+
+-- Additional indexes for new tables
+CREATE INDEX IF NOT EXISTS idx_learning_modules_published ON learning_modules(is_published);
+CREATE INDEX IF NOT EXISTS idx_learning_modules_order ON learning_modules(order_index);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(is_published);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_author ON blog_posts(author_id);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON blog_posts(published_at);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_category_id ON blog_posts(category_id);
+CREATE INDEX IF NOT EXISTS idx_user_module_progress_user ON user_module_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_module_progress_module ON user_module_progress(module_id);
+
+-- Create triggers for updated_at columns on new tables
+CREATE TRIGGER update_learning_modules_updated_at BEFORE UPDATE ON learning_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_blog_posts_updated_at BEFORE UPDATE ON blog_posts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Storage bucket for file uploads (run in Supabase dashboard)
 /*

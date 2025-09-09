@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Event Registration Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            padding: 0 2rem;
+        }
+
+        .nav-tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background-color: #f8f9fa;
+        }
+
+        .nav-tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #5a6fd8;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .pagination button:hover {
+            background-color: #f8f9fa;
+        }
+
+        .pagination button.active {
+            background-color: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+                padding: 0 1rem;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .table {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Admin Dashboard</h1>
+        <p>Manage members, blog posts, and platform settings</p>
+    </div>
+
+    <div class="nav-tabs">
+        <div class="nav-tab active" onclick="showTab('overview')">Overview</div>
+        <div class="nav-tab" onclick="showTab('members')">Members</div>
+        <div class="nav-tab" onclick="showTab('blog-posts')">Blog Posts</div>
+        <div class="nav-tab" onclick="showTab('categories')">Categories</div>
+    </div>
+
+    <div class="container">
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-members">-</div>
+                    <div class="stat-label">Total Members</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="active-members">-</div>
+                    <div class="stat-label">Active Members</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="total-posts">-</div>
+                    <div class="stat-label">Blog Posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="published-posts">-</div>
+                    <div class="stat-label">Published Posts</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Activity</h3>
+                </div>
+                <div class="card-body">
+                    <div id="recent-activity">
+                        <div class="loading">Loading recent activity...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members Tab -->
+        <div id="members" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Member Management</h3>
+                </div>
+                <div class="card-body">
+                    <div class="filters">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select class="form-control" id="member-status-filter">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Search</label>
+                            <input type="text" class="form-control" id="member-search" placeholder="Search members...">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" onclick="loadMembers()">Filter</button>
+                        </div>
+                    </div>
+
+                    <div id="members-table">
+                        <div class="loading">Loading members...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blog Posts Tab -->
+        <div id="blog-posts" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Blog Post Management</h3>
+                    <button class="btn btn-primary" onclick="showCreatePostModal()">Create New Post</button>
+                </div>
+                <div class="card-body">
+                    <div class="filters">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select class="form-control" id="post-status-filter">
+                                <option value="">All Status</option>
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select class="form-control" id="post-category-filter">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Search</label>
+                            <input type="text" class="form-control" id="post-search" placeholder="Search posts...">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" onclick="loadBlogPosts()">Filter</button>
+                        </div>
+                    </div>
+
+                    <div id="blog-posts-table">
+                        <div class="loading">Loading blog posts...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Tab -->
+        <div id="categories" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Category Management</h3>
+                    <button class="btn btn-primary" onclick="showCreateCategoryModal()">Create New Category</button>
+                </div>
+                <div class="card-body">
+                    <div id="categories-table">
+                        <div class="loading">Loading categories...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div id="create-post-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Blog Post</h3>
+                <span class="close" onclick="closeModal('create-post-modal')">&times;</span>
+            </div>
+            <form id="create-post-form">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" class="form-control" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select class="form-control" name="category_id">
+                        <option value="">Select Category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Excerpt</label>
+                    <textarea class="form-control" name="excerpt" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Content</label>
+                    <textarea class="form-control" name="content" rows="10" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-control" name="status">
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                    </select>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn btn-primary">Create Post</button>
+                    <button type="button" class="btn" onclick="closeModal('create-post-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Category Modal -->
+    <div id="create-category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Category</h3>
+                <span class="close" onclick="closeModal('create-category-modal')">&times;</span>
+            </div>
+            <form id="create-category-form">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Slug</label>
+                    <input type="text" class="form-control" name="slug" placeholder="Auto-generated if empty">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" name="description" rows="3"></textarea>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn btn-primary">Create Category</button>
+                    <button type="button" class="btn" onclick="closeModal('create-category-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentPage = 1;
+        let currentTab = 'overview';
+        const token = localStorage.getItem('authToken');
+
+        // Check authentication
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Load data for the tab
+            switch(tabName) {
+                case 'overview':
+                    loadOverview();
+                    break;
+                case 'members':
+                    loadMembers();
+                    break;
+                case 'blog-posts':
+                    loadBlogPosts();
+                    break;
+                case 'categories':
+                    loadCategories();
+                    break;
+            }
+        }
+
+        // Load overview data
+        async function loadOverview() {
+            try {
+                // Load stats
+                const [membersRes, postsRes] = await Promise.all([
+                    fetch('/api/admin-members', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }),
+                    fetch('/api/admin-blog', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                ]);
+
+                if (membersRes.ok) {
+                    const membersData = await membersRes.json();
+                    document.getElementById('total-members').textContent = membersData.pagination?.total || 0;
+                    const activeMembers = membersData.members?.filter(m => m.status === 'active').length || 0;
+                    document.getElementById('active-members').textContent = activeMembers;
+                }
+
+                if (postsRes.ok) {
+                    const postsData = await postsRes.json();
+                    document.getElementById('total-posts').textContent = postsData.pagination?.total || 0;
+                    const publishedPosts = postsData.posts?.filter(p => p.status === 'published').length || 0;
+                    document.getElementById('published-posts').textContent = publishedPosts;
+                }
+            } catch (error) {
+                console.error('Error loading overview:', error);
+            }
+        }
+
+        // Load members
+        async function loadMembers(page = 1) {
+            try {
+                const status = document.getElementById('member-status-filter')?.value || '';
+                const search = document.getElementById('member-search')?.value || '';
+                
+                const params = new URLSearchParams({
+                    page,
+                    limit: 10,
+                    ...(status && { status }),
+                    ...(search && { search })
+                });
+
+                const response = await fetch(`/api/admin-members?${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load members');
+                }
+
+                const data = await response.json();
+                renderMembersTable(data.members, data.pagination);
+            } catch (error) {
+                console.error('Error loading members:', error);
+                document.getElementById('members-table').innerHTML = '<p>Error loading members</p>';
+            }
+        }
+
+        // Render members table
+        function renderMembersTable(members, pagination) {
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Registered</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${members.map(member => `
+                            <tr>
+                                <td>${member.full_name || 'N/A'}</td>
+                                <td>${member.email}</td>
+                                <td><span class="badge badge-${getStatusColor(member.status)}">${member.status}</span></td>
+                                <td>${new Date(member.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewMember('${member.id}')">View</button>
+                                    <button class="btn btn-sm btn-warning" onclick="updateMemberStatus('${member.id}', '${member.status === 'active' ? 'inactive' : 'active'}')">
+                                        ${member.status === 'active' ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ${renderPagination(pagination, 'loadMembers')}
+            `;
+            document.getElementById('members-table').innerHTML = html;
+        }
+
+        // Load blog posts
+        async function loadBlogPosts(page = 1) {
+            try {
+                const status = document.getElementById('post-status-filter')?.value || '';
+                const category = document.getElementById('post-category-filter')?.value || '';
+                const search = document.getElementById('post-search')?.value || '';
+                
+                const params = new URLSearchParams({
+                    page,
+                    limit: 10,
+                    ...(status && { status }),
+                    ...(category && { category }),
+                    ...(search && { search })
+                });
+
+                const response = await fetch(`/api/admin-blog?${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load blog posts');
+                }
+
+                const data = await response.json();
+                renderBlogPostsTable(data.posts, data.pagination);
+            } catch (error) {
+                console.error('Error loading blog posts:', error);
+                document.getElementById('blog-posts-table').innerHTML = '<p>Error loading blog posts</p>';
+            }
+        }
+
+        // Render blog posts table
+        function renderBlogPostsTable(posts, pagination) {
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${posts.map(post => `
+                            <tr>
+                                <td>${post.title}</td>
+                                <td>${post.author?.full_name || 'Unknown'}</td>
+                                <td>${post.category?.name || 'Uncategorized'}</td>
+                                <td><span class="badge badge-${getStatusColor(post.status)}">${post.status}</span></td>
+                                <td>${new Date(post.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="editPost('${post.id}')">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deletePost('${post.id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ${renderPagination(pagination, 'loadBlogPosts')}
+            `;
+            document.getElementById('blog-posts-table').innerHTML = html;
+        }
+
+        // Load categories
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/admin-categories', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load categories');
+                }
+
+                const data = await response.json();
+                renderCategoriesTable(data.categories);
+                
+                // Update category dropdowns
+                updateCategoryDropdowns(data.categories);
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                document.getElementById('categories-table').innerHTML = '<p>Error loading categories</p>';
+            }
+        }
+
+        // Render categories table
+        function renderCategoriesTable(categories) {
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Slug</th>
+                            <th>Description</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${categories.map(category => `
+                            <tr>
+                                <td>${category.name}</td>
+                                <td>${category.slug}</td>
+                                <td>${category.description || 'N/A'}</td>
+                                <td>${new Date(category.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="editCategory('${category.id}')">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteCategory('${category.id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('categories-table').innerHTML = html;
+        }
+
+        // Update category dropdowns
+        function updateCategoryDropdowns(categories) {
+            const dropdowns = [
+                document.getElementById('post-category-filter'),
+                document.querySelector('#create-post-form select[name="category_id"]')
+            ];
+
+            dropdowns.forEach(dropdown => {
+                if (dropdown) {
+                    const currentValue = dropdown.value;
+                    const isFilter = dropdown.id === 'post-category-filter';
+                    
+                    dropdown.innerHTML = isFilter ? '<option value="">All Categories</option>' : '<option value="">Select Category</option>';
+                    
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    if (currentValue) dropdown.value = currentValue;
+                }
+            });
+        }
+
+        // Utility functions
+        function getStatusColor(status) {
+            switch(status) {
+                case 'active':
+                case 'published': return 'success';
+                case 'pending':
+                case 'draft': return 'warning';
+                case 'inactive':
+                case 'archived': return 'danger';
+                default: return 'info';
+            }
+        }
+
+        function renderPagination(pagination, loadFunction) {
+            if (!pagination || pagination.totalPages <= 1) return '';
+            
+            let html = '<div class="pagination">';
+            
+            for (let i = 1; i <= pagination.totalPages; i++) {
+                html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="${loadFunction}(${i})">${i}</button>`;
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        // Modal functions
+        function showCreatePostModal() {
+            document.getElementById('create-post-modal').style.display = 'block';
+        }
+
+        function showCreateCategoryModal() {
+            document.getElementById('create-category-modal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Form handlers
+        document.getElementById('create-post-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const postData = Object.fromEntries(formData.entries());
+            
+            try {
+                const response = await fetch('/api/admin-blog', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(postData)
+                });
+                
+                if (response.ok) {
+                    closeModal('create-post-modal');
+                    loadBlogPosts();
+                    e.target.reset();
+                    showNotification('Blog post created successfully!', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification('Error creating post: ' + error.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating post:', error);
+                showNotification('Error creating blog post', 'error');
+            }
+        });
+
+        document.getElementById('create-category-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const categoryData = Object.fromEntries(formData.entries());
+            
+            try {
+                const response = await fetch('/api/admin-categories', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(categoryData)
+                });
+                
+                if (response.ok) {
+                    closeModal('create-category-modal');
+                    loadCategories();
+                    e.target.reset();
+                    showNotification('Category created successfully!', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification('Error creating category: ' + error.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating category:', error);
+                showNotification('Error creating category', 'error');
+            }
+        });
+
+        // Notification function
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                border-radius: 5px;
+                color: white;
+                z-index: 10000;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                background-color: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Action functions
+        function viewMember(id) {
+            alert(`View member: ${id}`);
+        }
+
+        async function updateMemberStatus(id, newStatus) {
+            try {
+                const response = await fetch(`/api/admin-members/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    loadMembers();
+                    showNotification(`Member status updated to ${newStatus}`, 'success');
+                } else {
+                    showNotification('Failed to update member status', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating member status:', error);
+                showNotification('Error updating member status', 'error');
+            }
+        }
+
+        function editPost(id) {
+            // For now, just show an alert - full edit functionality would require another modal
+            alert(`Edit post functionality would open edit modal for post: ${id}`);
+        }
+
+        async function deletePost(id) {
+            if (confirm('Are you sure you want to delete this post?')) {
+                try {
+                    const response = await fetch(`/api/admin-blog/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        loadBlogPosts();
+                        showNotification('Post deleted successfully', 'success');
+                    } else {
+                        showNotification('Failed to delete post', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting post:', error);
+                    showNotification('Error deleting post', 'error');
+                }
+            }
+        }
+
+        function editCategory(id) {
+            // For now, just show an alert - full edit functionality would require another modal
+            alert(`Edit category functionality would open edit modal for category: ${id}`);
+        }
+
+        async function deleteCategory(id) {
+            if (confirm('Are you sure you want to delete this category?')) {
+                try {
+                    const response = await fetch(`/api/admin-categories/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        loadCategories();
+                        showNotification('Category deleted successfully', 'success');
+                    } else {
+                        showNotification('Failed to delete category', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting category:', error);
+                    showNotification('Error deleting category', 'error');
+                }
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOverview();
+            loadCategories(); // Load categories for dropdowns
+        });
+    </script>
+</body>
+</html>
